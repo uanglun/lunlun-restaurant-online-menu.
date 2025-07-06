@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>綸綸餐飲店 線上點餐系統</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f6f6f6;
+      padding: 20px;
+      font-size: 16px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 24px;
+    }
+    .category {
+      margin-top: 30px;
+    }
+    .category h2 {
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 5px;
+      font-size: 20px;
+    }
+    .menu-item {
+      background: #fff;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 16px;
+    }
+    .menu-item .item-info {
+      flex: 2;
+    }
+    .menu-item .quantity-group {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn {
+      padding: 6px 10px;
+      cursor: pointer;
+      background-color: #ff9800;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      margin: 5px 5px 5px 0;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+    }
+    .btn:hover {
+      background-color: #e68900;
+    }
+    #menu-view, #cart-view {
+      display: none;
+    }
+    .form-group {
+      margin: 10px 0;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 16px;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>綸綸餐飲店 線上點餐系統</h1>
+
+  
+<div id="success-view" style="display:none;">
+  <h2>感謝您的訂購！</h2>
+  <p>我們將為您準備餐點，預計時間為 10~15 分鐘，如遇尖峰時段還請您耐心等候。<br>造成不便，敬請見諒！</p>
+</div>
+
+  <div id="menu-view">
+    <div id="menu"></div>
+    <button class="btn" onclick="showCart()">查看購物車</button>
+  </div>
+
+  <div id="cart-view">
+    <h2>🛒 購物車頁面</h2>
+    <ul id="cart-list"></ul>
+    <p>💵 總金額：<span id="total">0</span> 元</p>
+
+    <div class="form-group">
+      <label for="name">姓名：</label>
+      <input type="text" id="name" placeholder="請輸入姓名">
+    </div>
+    <div class="form-group">
+      <label for="phone">電話：</label>
+      <input type="text" id="phone" placeholder="請輸入電話">
+    </div>
+    <div class="form-group">
+      <label for="orderType">用餐方式：</label>
+      <select id="orderType" onchange="toggleAddress()">
+        <option value="內用">內用</option>
+        <option value="外帶">外帶</option>
+        <option value="外送">外送</option>
+      </select>
+
+<!-- 新增付款碼輸入區 -->
+<div class="form-group" id="barcodeGroup" style="display:none">
+  <label id="barcodeLabel" for="barcodeInput">請輸入付款碼：</label>
+  <input type="text" id="barcodeInput" placeholder="請輸入付款碼">
+</div>
+    </div>
+    <div class="form-group" id="addressGroup" style="display:none">
+      <label for="address">地址（限外送填寫）：</label>
+      <input type="text" id="address" placeholder="請輸入外送地址">
+    </div>
+    <div class="form-group">
+      <label for="payment">付款方式：</label>
+      <select id="payment" onchange="toggleBarcode()">
+        <option value="現金">現金</option>
+        <option value="信用卡">信用卡</option>
+        <option value="LINE PAY">LINE PAY</option>
+        <option value="APPLE PAY">APPLE PAY</option>
+      </select>
+
+<!-- 新增付款碼輸入區 -->
+<div class="form-group" id="barcodeGroup" style="display:none">
+  <label id="barcodeLabel" for="barcodeInput">請輸入付款碼：</label>
+  <input type="text" id="barcodeInput" placeholder="請輸入付款碼">
+</div>
+    </div>
+
+    <div class="form-group">
+      <label for="invoiceType">發票給予方式：</label>
+      <select id="invoiceType" onchange="toggleInvoiceFields()">
+        <option value="紙本發票">紙本發票</option>
+        <option value="載具">載具</option>
+        <option value="統編">統編</option>
+      </select>
+
+<!-- 新增付款碼輸入區 -->
+<div class="form-group" id="barcodeGroup" style="display:none">
+  <label id="barcodeLabel" for="barcodeInput">請輸入付款碼：</label>
+  <input type="text" id="barcodeInput" placeholder="請輸入付款碼">
+</div>
+    </div>
+
+    <div class="form-group" id="carrierGroup" style="display:none">
+      <label for="carrier">載具條碼：</label>
+      <input type="text" id="carrier" placeholder="請輸入載具條碼">
+    </div>
+
+    <div class="form-group" id="taxIdGroup" style="display:none">
+      <label for="taxId">統一編號：</label>
+      <input type="text" id="taxId" placeholder="請輸入統一編號">
+    </div>
+
+    <button class="btn" onclick="submitOrder()">送出訂單</button>
+    <button class="btn" onclick="removeItems()">清空購物車</button>
+    <button class="btn" onclick="showMenu()">回到選單</button>
+    <p id="message"></p>
+  </div>
+
+  <script>
+    const menuItems = {
+      "飯類": [
+        { name: "雞肉蓋飯", price: 80 },
+        { name: "牛肉鍋巴", price: 80 },
+        { name: "打拋豬飯", price: 75 },
+        { name: "打拋牛飯", price: 90 },
+        { name: "牛肉拼盤", price: 185 },
+        { name: "牛肉炒飯", price: 90 },
+        { name: "炒飯", price: 55 },
+        { name: "咖哩飯", price: 65 },
+        { name: "蛋包飯", price: 65 },
+        { name: "豬肉蓋飯", price: 75 }
+      ],
+      "麵類": [
+        { name: "炒麵", price: 55 },
+        { name: "咖哩麵", price: 65 },
+        { name: "牛肉炒麵", price: 90 },
+        { name: "牛肉麵(小)", price: 100 },
+        { name: "牛肉麵(大)", price: 120 },
+        { name: "牛肉湯麵(無肉)", price: 70 },
+        { name: "炒泡麵", price: 65 },
+        { name: "火雞麵", price: 85 },
+        { name: "小龍蝦麵", price: 90 },
+        { name: "麻醬麵", price: 55 },
+        { name: "餛飩麵", price: 80 },
+        { name: "拌麵(乾)", price: 50 },
+        { name: "榨菜肉絲麵(湯/乾)", price: 55 }
+      ],
+      "湯類": [
+        { name: "魚丸湯", price: 45 },
+        { name: "牛肉湯", price: 80 },
+        { name: "貢丸湯", price: 50 },
+        { name: "味噌湯", price: 50 },
+        { name: "清湯", price: 45 },
+        { name: "餛飩湯", price: 70 }
+      ]
+    };
+
+    const cart = [];
+
+    function renderMenu() {
+      const menuDiv = document.getElementById("menu");
+      Object.keys(menuItems).forEach(category => {
+        const categoryDiv = document.createElement("div");
+        categoryDiv.className = "category";
+        const header = document.createElement("h2");
+        header.textContent = category;
+        categoryDiv.appendChild(header);
+
+        menuItems[category].forEach(item => {
+          const el = document.createElement("div");
+          el.className = "menu-item";
+          let extraOption = "";
+          if (item.name === "榨菜肉絲麵(湯/乾)") {
+            extraOption = `
+              <div class="quantity-group">
+                湯/乾：
+                <select class="soup-option">
+                  <option value="湯">湯</option>
+                  <option value="乾">乾</option>
+                </select>
+              </div>
+            `;
+          }
+          el.innerHTML = `
+            <div class="item-info">${item.name} - ${item.price} 元</div>
+            <div class="quantity-group">
+              數量：
+              <select class="quantity">
+                ${[...Array(10).keys()].map(i => `<option value="${i+1}">${i+1}</option>`).join("")}
+              </select>
+            </div>
+            ${extraOption}
+            <button class="btn" onclick="addToCart(this, '${item.name}', ${item.price})">加入購物車</button>
+          `;
+          categoryDiv.appendChild(el);
+        });
+
+        menuDiv.appendChild(categoryDiv);
+      });
+    }
+
+    function addToCart(button, name, price) {
+      const quantity = parseInt(button.parentElement.querySelector(".quantity").value);
+      const soupOptionElement = button.parentElement.querySelector(".soup-option");
+      let soupOption = '';
+      if (soupOptionElement) {
+        soupOption = soupOptionElement.value;
+      }
+      const itemName = soupOption ? `${name} (${soupOption})` : name;
+      const existing = cart.find(item => item.name === itemName);
+      if (existing) {
+        existing.quantity += quantity;
+      } else {
+        cart.push({ name: itemName, price, quantity });
+      }
+      showToast(`已加入 ${quantity} 份 ${itemName}`);
+    }
+
+    function showMenu() {
+      document.getElementById("menu-view").style.display = "block";
+      document.getElementById("cart-view").style.display = "none";
+    }
+
+    function showCart() {
+      document.getElementById("menu-view").style.display = "none";
+      document.getElementById("cart-view").style.display = "block";
+
+      const list = document.getElementById("cart-list");
+      const totalEl = document.getElementById("total");
+      list.innerHTML = "";
+      let total = 0;
+      cart.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = `${item.name} x ${item.quantity} - ${item.price * item.quantity} 元`;
+        list.appendChild(li);
+        total += item.price * item.quantity;
+      });
+      totalEl.textContent = total;
+    }
+
+    function removeItems() {
+      cart.length = 0;
+      showCart();
+      document.getElementById("message").textContent = "購物車已清空。";
+    }
+
+    function toggleAddress() {
+      const orderType = document.getElementById("orderType").value;
+      document.getElementById("addressGroup").style.display = orderType === "外送" ? "block" : "none";
+    }
+
+    function toggleInvoiceFields() {
+      const type = document.getElementById("invoiceType").value;
+      document.getElementById("carrierGroup").style.display = type === "載具" ? "block" : "none";
+      document.getElementById("taxIdGroup").style.display = type === "統編" ? "block" : "none";
+    }
+
+    function submitOrder() {
+      if (cart.length === 0) {
+        document.getElementById("message").textContent = "請先選擇餐點喔！";
+        return;
+      }
+
+      const name = document.getElementById("name").value;
+      const phone = document.getElementById("phone").value;
+      const orderType = document.getElementById("orderType").value;
+      const address = document.getElementById("address").value;
+      const payment = document.getElementById("payment").value;
+
+      const invoiceType = document.getElementById("invoiceType").value;
+      const barcodeInput = document.getElementById("barcodeInput").value;
+
+      if ((payment === "LINE PAY" || payment === "APPLE PAY") && !barcodeInput) {
+        document.getElementById("message").textContent = `請輸入 ${payment} 的付款碼。`;
+        return;
+      }
+
+      const carrier = document.getElementById("carrier").value;
+      const taxId = document.getElementById("taxId").value;
+
+      if (!name || !phone || (orderType === "外送" && !address)) {
+        document.getElementById("message").textContent = "請完整填寫所有必要欄位。";
+        return;
+      }
+
+      if (invoiceType === "載具" && !carrier) {
+        document.getElementById("message").textContent = "請輸入載具條碼。";
+        return;
+      }
+
+      if (invoiceType === "統編" && !taxId) {
+        document.getElementById("message").textContent = "請輸入統一編號。";
+        return;
+      }
+
+      
+      document.getElementById("cart-view").style.display = "none";
+      document.getElementById("success-view").style.display = "block";
+      cart.length = 0;
+
+    }
+
+    
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.style.display = "block";
+      setTimeout(() => {
+        toast.style.display = "none";
+      }, 2000);
+    }
+
+    
+function toggleBarcode() {
+  const payment = document.getElementById("payment").value;
+  const barcodeGroup = document.getElementById("barcodeGroup");
+  const barcodeLabel = document.getElementById("barcodeLabel");
+
+  if (payment === "LINE PAY" || payment === "APPLE PAY") {
+    barcodeGroup.style.display = "block";
+    barcodeLabel.textContent = `請輸入 ${payment} 付款碼：`;
+  } else {
+    barcodeGroup.style.display = "none";
+  }
+}
+
+
+    showMenu();
+    renderMenu();
+  </script>
+
+<div id="toast" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+ background-color:#333; color:#fff; padding:10px 20px; border-radius:5px; font-size:16px; z-index:1000;">
+  已加入購物車！
+</div>
+
+</body>
+</html>
