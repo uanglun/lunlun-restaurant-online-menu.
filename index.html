@@ -31,15 +31,18 @@
       align-items: center;
       justify-content: space-between;
       font-size: 16px;
+      flex-wrap: wrap; /* 讓項目在小螢幕上可以換行 */
     }
     .menu-item .item-info {
       flex: 2;
+      min-width: 150px;
     }
     .menu-item .quantity-group {
       flex: 1;
       display: flex;
       align-items: center;
       gap: 5px;
+      min-width: 150px;
     }
     .btn {
       padding: 6px 10px;
@@ -83,6 +86,7 @@
 <div id="success-view" style="display:none;">
   <h2>感謝您的訂購！</h2>
   <p>我們將為您準備餐點，預計時間為 10~15 分鐘，如遇尖峰時段還請您耐心等候。<br>造成不便，敬請見諒！</p>
+  <p style="color: red;">【注意】此為本地測試版，訂單只儲存在您本機瀏覽器，沒有實際送出給店家。</p>
 </div>
 
   <div id="menu-view">
@@ -110,12 +114,6 @@
         <option value="外帶">外帶</option>
         <option value="外送">外送</option>
       </select>
-
-<!-- 新增付款碼輸入區 -->
-<div class="form-group" id="barcodeGroup" style="display:none">
-  <label id="barcodeLabel" for="barcodeInput">請輸入付款碼：</label>
-  <input type="text" id="barcodeInput" placeholder="請輸入付款碼">
-</div>
     </div>
     <div class="form-group" id="addressGroup" style="display:none">
       <label for="address">地址（限外送填寫）：</label>
@@ -130,7 +128,6 @@
         <option value="APPLE PAY">APPLE PAY</option>
       </select>
 
-<!-- 新增付款碼輸入區 -->
 <div class="form-group" id="barcodeGroup" style="display:none">
   <label id="barcodeLabel" for="barcodeInput">請輸入付款碼：</label>
   <input type="text" id="barcodeInput" placeholder="請輸入付款碼">
@@ -144,12 +141,6 @@
         <option value="載具">載具</option>
         <option value="統編">統編</option>
       </select>
-
-<!-- 新增付款碼輸入區 -->
-<div class="form-group" id="barcodeGroup" style="display:none">
-  <label id="barcodeLabel" for="barcodeInput">請輸入付款碼：</label>
-  <input type="text" id="barcodeInput" placeholder="請輸入付款碼">
-</div>
     </div>
 
     <div class="form-group" id="carrierGroup" style="display:none">
@@ -161,6 +152,12 @@
       <label for="taxId">統一編號：</label>
       <input type="text" id="taxId" placeholder="請輸入統一編號">
     </div>
+
+    <div class="form-group">
+       <label for="notes">備註：</label>
+       <textarea id="notes" rows="3" placeholder="例如：飯少一點、不要蔥、送餐前請電聯..."></textarea>
+    </div>
+
 
     <button class="btn" onclick="submitOrder()">送出訂單</button>
     <button class="btn" onclick="removeItems()">清空購物車</button>
@@ -211,6 +208,7 @@
 
     function renderMenu() {
       const menuDiv = document.getElementById("menu");
+      menuDiv.innerHTML = ''; // 新增清空，避免重複渲染
       Object.keys(menuItems).forEach(category => {
         const categoryDiv = document.createElement("div");
         categoryDiv.className = "category";
@@ -252,13 +250,15 @@
     }
 
     function addToCart(button, name, price) {
-      const quantity = parseInt(button.parentElement.querySelector(".quantity").value);
-      const soupOptionElement = button.parentElement.querySelector(".soup-option");
+      const parentItem = button.closest('.menu-item');
+      const quantity = parseInt(parentItem.querySelector(".quantity").value);
+      const soupOptionElement = parentItem.querySelector(".soup-option");
       let soupOption = '';
       if (soupOptionElement) {
         soupOption = soupOptionElement.value;
       }
-      const itemName = soupOption ? `${name} (${soupOption})` : name;
+      const itemName = soupOption ? `${name.split('(')[0].trim()} (${soupOption})` : name; // 修正名稱顯示
+      
       const existing = cart.find(item => item.name === itemName);
       if (existing) {
         existing.quantity += quantity;
@@ -271,24 +271,43 @@
     function showMenu() {
       document.getElementById("menu-view").style.display = "block";
       document.getElementById("cart-view").style.display = "none";
+      document.getElementById("success-view").style.display = "none";
+      renderMenu();
     }
 
     function showCart() {
       document.getElementById("menu-view").style.display = "none";
       document.getElementById("cart-view").style.display = "block";
+      document.getElementById("success-view").style.display = "none";
 
       const list = document.getElementById("cart-list");
       const totalEl = document.getElementById("total");
       list.innerHTML = "";
       let total = 0;
-      cart.forEach(item => {
+      cart.forEach((item, index) => {
         const li = document.createElement("li");
-        li.textContent = `${item.name} x ${item.quantity} - ${item.price * item.quantity} 元`;
+        
+        // 增加刪除按鈕
+        li.innerHTML = `
+          <span>${item.name} x ${item.quantity} - ${item.price * item.quantity} 元</span>
+          <button class="btn btn-small" style="background-color: #dc3545;" onclick="deleteCartItem(${index})">刪除</button>
+        `;
         list.appendChild(li);
         total += item.price * item.quantity;
       });
       totalEl.textContent = total;
+      document.getElementById("message").textContent = "";
     }
+    
+    // 增加刪除購物車單一項目功能
+    function deleteCartItem(index) {
+        if (confirm("確定要從購物車中刪除此商品嗎？")) {
+            cart.splice(index, 1);
+            showCart(); // 重新顯示購物車
+            showToast("商品已從購物車中刪除。");
+        }
+    }
+
 
     function removeItems() {
       cart.length = 0;
@@ -306,6 +325,20 @@
       document.getElementById("carrierGroup").style.display = type === "載具" ? "block" : "none";
       document.getElementById("taxIdGroup").style.display = type === "統編" ? "block" : "none";
     }
+    
+    function toggleBarcode() {
+      const payment = document.getElementById("payment").value;
+      const barcodeGroup = document.getElementById("barcodeGroup");
+      const barcodeLabel = document.getElementById("barcodeLabel");
+
+      if (payment === "LINE PAY" || payment === "APPLE PAY") {
+        barcodeGroup.style.display = "block";
+        barcodeLabel.textContent = `請輸入 ${payment} 付款碼：`;
+      } else {
+        barcodeGroup.style.display = "none";
+      }
+    }
+
 
     function submitOrder() {
       if (cart.length === 0) {
@@ -318,40 +351,96 @@
       const orderType = document.getElementById("orderType").value;
       const address = document.getElementById("address").value;
       const payment = document.getElementById("payment").value;
+      const notes = document.getElementById("notes").value; // 新增備註欄位
 
       const invoiceType = document.getElementById("invoiceType").value;
       const barcodeInput = document.getElementById("barcodeInput").value;
 
+      const carrier = document.getElementById("carrier").value;
+      const taxId = document.getElementById("taxId").value;
+      const totalAmount = document.getElementById("total").textContent;
+
+
+      // --- 必填欄位檢查 ---
       if ((payment === "LINE PAY" || payment === "APPLE PAY") && !barcodeInput) {
         document.getElementById("message").textContent = `請輸入 ${payment} 的付款碼。`;
         return;
       }
 
-      const carrier = document.getElementById("carrier").value;
-      const taxId = document.getElementById("taxId").value;
-
       if (!name || !phone || (orderType === "外送" && !address)) {
         document.getElementById("message").textContent = "請完整填寫所有必要欄位。";
         return;
       }
-
+      
       if (invoiceType === "載具" && !carrier) {
-        document.getElementById("message").textContent = "請輸入載具條碼。";
-        return;
+          document.getElementById("message").textContent = "請輸入載具條碼。";
+          return;
       }
 
       if (invoiceType === "統編" && !taxId) {
-        document.getElementById("message").textContent = "請輸入統一編號。";
-        return;
+          document.getElementById("message").textContent = "請輸入統一編號。";
+          return;
+      }
+      // --- 必填欄位檢查結束 ---
+      
+      // 1. 建立完整的訂單資料物件
+      const orderData = {
+          timestamp: new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }), // 紀錄送出時間
+          name: name,
+          phone: phone,
+          orderType: orderType,
+          address: orderType === "外送" ? address : "N/A",
+          payment: payment,
+          paymentBarcode: (payment === "LINE PAY" || payment === "APPLE PAY") ? barcodeInput : "N/A",
+          invoiceType: invoiceType,
+          carrier: invoiceType === "載具" ? carrier : "N/A",
+          taxId: invoiceType === "統編" ? taxId : "N/A",
+          notes: notes, // 新增
+          totalAmount: parseInt(totalAmount),
+          items: JSON.parse(JSON.stringify(cart)), // 複製購物車內容
+          store: "餐飲店", // 標記是哪個店的訂單
+          status: "新訂單"
+      };
+      
+      // 2. 讀取現有的儲存資料
+      const STORAGE_KEY = 'lunlunRestaurantOrders'; // 餐飲店專用的 Key
+      let existingOrdersJSON = localStorage.getItem(STORAGE_KEY);
+      
+      let existingOrders;
+      try {
+          existingOrders = existingOrdersJSON ? JSON.parse(existingOrdersJSON) : [];
+      } catch (e) {
+          console.error("解析本地儲存資料時發生錯誤，將覆蓋舊資料：", e);
+          existingOrders = [];
+      }
+      
+      // 3. 將新的訂單加入陣列
+      existingOrders.push(orderData);
+
+      // 4. 存回 localStorage
+      try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(existingOrders));
+          console.log("【訂單已成功本地儲存】", orderData);
+      } catch (e) {
+          console.error("本地儲存訂單時發生錯誤：", e);
       }
 
-      
+      // 5. 顯示成功畫面並清空
       document.getElementById("cart-view").style.display = "none";
       document.getElementById("success-view").style.display = "block";
-      cart.length = 0;
-
+      
+      // 清空購物車及表單 (與您原有邏輯相同)
+      cart.length = 0; 
+      document.getElementById("name").value = "";
+      document.getElementById("phone").value = "";
+      document.getElementById("address").value = "";
+      document.getElementById("barcodeInput").value = "";
+      document.getElementById("carrier").value = "";
+      document.getElementById("taxId").value = "";
+      document.getElementById("notes").value = ""; // 新增
+      document.getElementById("message").textContent = "";
     }
-
+    // ---------------------------------------------
     
     function showToast(message) {
       const toast = document.getElementById("toast");
@@ -362,28 +451,14 @@
       }, 2000);
     }
 
-    
-function toggleBarcode() {
-  const payment = document.getElementById("payment").value;
-  const barcodeGroup = document.getElementById("barcodeGroup");
-  const barcodeLabel = document.getElementById("barcodeLabel");
 
-  if (payment === "LINE PAY" || payment === "APPLE PAY") {
-    barcodeGroup.style.display = "block";
-    barcodeLabel.textContent = `請輸入 ${payment} 付款碼：`;
-  } else {
-    barcodeGroup.style.display = "none";
-  }
-}
-
-
-    showMenu();
-    renderMenu();
+    showMenu(); // 首次載入頁面時顯示菜單
+    renderMenu(); // 首次載入頁面時渲染菜單
   </script>
 
 <div id="toast" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
  background-color:#333; color:#fff; padding:10px 20px; border-radius:5px; font-size:16px; z-index:1000;">
-  已加入購物車！
+ 已加入購物車！
 </div>
 
 </body>
